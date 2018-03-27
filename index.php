@@ -1,49 +1,9 @@
 <?php
 
 require 'config.php';
+require 'css.php';
 
-echo '<html><head><style> 
-
-table {
-    border-collapse: collapse;
-}
-
-table, th, td {
-    border: 1px solid rgba(0,0,0,0.4);
-    padding:5px;
-   
-}
-
-textarea{width:100%; height:200px;}
-div{border: 1px solid black; padding:10px; margin:10px}
-
-.check_if_dest_exists_and_update_or_add {
-  background-color: rgba(0, 100, 100, 0.1);
-} 
-.check_if_dest_needs_update {
-  background-color: rgba( 0, 0, 100, 0.1);
-}  
-.check_if_dest_needs_update {
-  background-color: rgba( 0, 0, 100, 0.1);
-}  
-.check_all_dest_array_and_update_or_add {
-  background-color: rgba( 0, 100, 100, 0.1);
-}  
-.create_dest_array {
-  background-color: rgba( 0, 100, 100, 0.1);
-}  
-.create_source_array {
-  background-color: rgba( 0, 100, 100, 0.1);
-}  
-.filter_source_array {
-  background-color: rgba( 0, 100, 100, 0.1);
-} 
-
-.curl_error {
-  background-color:rgb(100,0,0);
-  color:white;
-}
-
+echo '<html><head><style>'.$REPORTCSS.'
 </style>
 </head><body>';
 //https://pageconfig.com/post/remove-undesired-characters-with-trim_all-php
@@ -72,8 +32,8 @@ class AlmaCourse
     public $reading_lists;
     public $status;
 
-  
- 
+
+
   public function __construct( $code ="", $name ="", $section ="", $academic_department ="", $processing_department ="", $term ="", $start_date ="", $end_date ="", $weekly_hours ="", $participants ="", $year ="", $instructor ="", $searchable_id ="", $note ="", $reading_lists ="", $status ="INACTIVE" )
       {
             $this->code = $code;
@@ -109,7 +69,7 @@ class BrandeisCourse
     public $Status;
     public $CourseCode;
     public $CourseSection;
-    
+
     public function __construct($classnumber, $subject, $coursenumber, $coursetitle, $limit, $actual, $waitlist, $consent, $instructor, $status)
       {
         $this->ClassNumber =  $classnumber;
@@ -122,15 +82,15 @@ class BrandeisCourse
         $this->Consent =  $consent;
         $this->Instructor =  $instructor;
         $this->Status =  $status;
-        
+
         $CourseCodeSectionArray = explode(' ', $coursenumber);
-        
+
         $this->CourseCode = $CourseCodeSectionArray[0];
         $this->CourseSection = $CourseCodeSectionArray[1];
       }
-    
+
 }
-    
+
 class CourseCreator
 {
     public $SourceArray;
@@ -148,7 +108,7 @@ class CourseCreator
     public $ProcessingDept;
     public $LastApiCall;
     public $reasonsList;
-    
+
     public function wait_for_api_limit() {
         if ($this->Debug) {
             echo "<div class='wait_for_api_limit'>";
@@ -167,9 +127,9 @@ class CourseCreator
             echo "</div>";
         }
     }
-    
+
     public function send_api_request( $CURLOPT_URL, $xmlorjson, $GETPUTPOSTorDELETE, $POSTFIELDS, $try = 0) {
-        
+
         if ($this->Debug) {
             echo "<div class='send_api_request'>";
             $requestArray = explode('apikey',$CURLOPT_URL);
@@ -177,7 +137,7 @@ class CourseCreator
             echo print_r($POSTFIELDS);
             echo "</textarea><br>";
         }
-        
+
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $CURLOPT_URL);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
@@ -190,11 +150,11 @@ class CourseCreator
             curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/'.$xmlorjson));
         }
         curl_setopt($ch, CURLOPT_FAILONERROR, true);
-        
+
         $this->wait_for_api_limit();
         $response = curl_exec($ch);
         $this->LastApiCall = microtime(true);
-        
+
         if(curl_error($ch)) {
             echo "<div class='curl_error'>error on try $try: <br />" . curl_error($ch) . "</div>";
             echo '<textarea>';
@@ -207,7 +167,7 @@ class CourseCreator
             } else {
                 echo 'Failed 5 times. Giving up';
             }
-            
+
         } else {
             if ($this->Debug) {
                 /*
@@ -225,12 +185,12 @@ class CourseCreator
         }
         return $response;
     }
-    
+
     public function create_source_array() {
         if ($this->Debug) {
             echo "<div class='create_source_array'>";
         }
-        
+
         function rows($elements)
         {
             $str = "";
@@ -240,30 +200,30 @@ class CourseCreator
 
             return $str;
         }
-        
+
         if ($this->Debug) echo "create_source_array<br>";
-        
+
         //pull HTML of registrar courses page into a string
         $mySourceHTMLString = file_get_contents($this->SourceCourseUrl);
         //if ($this->Debug) echo "<textarea>".$mySourceHTMLString."</textarea><br>";
-        
+
         //create a DOMDocument object
         $mySourceHTML = new DOMDocument();
-        
+
         //https://stackoverflow.com/questions/1148928/disable-warnings-when-loading-non-well-formed-html-by-domdocument-php
         libxml_use_internal_errors(true);
-        
+
         //load string with HTML into the DOMDocument object.
         $mySourceHTML->loadHTML($mySourceHTMLString);
         libxml_clear_errors();
         $coursesList = $mySourceHTML->getElementById("classes-list");
-        
+
         $coursesArray = $coursesList->getElementsByTagName('tr');
-        
+
         //if ($this->Debug) echo "<textarea>".$mySourceHTML->saveHTML($coursesList)."</textarea><br>";
-        
+
         $this->SourceArray = array();
-        
+
         foreach ($coursesArray as $courseRecord) {
             $courseValues = $courseRecord->getElementsByTagName('td');
             array_push($this->SourceArray, new BrandeisCourse(
@@ -279,7 +239,7 @@ class CourseCreator
                 trim_all($courseValues->item(9)->textContent)
             ));
         }
-        
+
         if ($this->Debug) {
             echo '<textarea>';
             foreach ($this->SourceArray as $myCourse) {
@@ -288,38 +248,38 @@ class CourseCreator
             echo '</textarea><br>';
             echo "</div>";
         }
-        
+
     }
-    
+
     public function filter_source_array() {
-        
+
         if ($this->Debug) {
             echo "<div class='filter_source_array'>";
             echo "filter_source_array<br>";
         }
         $this->FilteredSourceArray = array();
-            
+
         foreach ($this->SourceArray as $brandeisCourse) {
             if ($brandeisCourse->ClassNumber != "" && $brandeisCourse->Subject != "PE") {
                     $duplicate = false;
-                
+
                     foreach ($this->FilteredSourceArray as $brandeisCourseFiltered) {
                         if ($brandeisCourseFiltered->Instructor == $brandeisCourse->Instructor &&
                             $brandeisCourseFiltered->CourseCode == $brandeisCourse->CourseCode &&
                             $brandeisCourseFiltered->CourseSection != $brandeisCourse->CourseSection) {
                                 $duplicate = true;
                                  break;
-                        } 
+                        }
                     }
                     if ($duplicate) {
                         if ($this->Debug) echo "skipping duplicate".$brandeisCourse->ClassNumber." ".$brandeisCourse->CourseTitle."<br>";
                     } else {
-                        array_push($this->FilteredSourceArray, $brandeisCourse);                        
+                        array_push($this->FilteredSourceArray, $brandeisCourse);
                     }
-                
+
             }
         }
-        
+
         if ($this->Debug) {
             echo '<textarea>';
             foreach ($this->FilteredSourceArray as $myCourse) {
@@ -328,27 +288,27 @@ class CourseCreator
             echo '</textarea><br>';
             echo "</div>";
         }
-        
+
     }
-    
+
     public function create_dest_array() {
-        
+
         if ($this->Debug) {
             echo "<div class='create_dest_array'>";
             echo "create_dest_array<br>";
         }
-        
+
         $this->DestArray = array();
-        
+
         if ($this->Semester == "SPRING") $semesterCode = 1;
         if ($this->Semester == "SUMMER") $semesterCode = 2;
         if ($this->Semester == "FALL") $semesterCode = 3;
-        
-        
-        
+
+
+
         foreach ($this->FilteredSourceArray as $brandeisCourse) {
-            
-            $code = $this->YearSuffix . $semesterCode . $brandeisCourse->Subject . "-" 
+
+            $code = $this->YearSuffix . $semesterCode . $brandeisCourse->Subject . "-"
                 . $brandeisCourse->CourseCode . "-" . $brandeisCourse->CourseSection;
             $name = $brandeisCourse->CourseTitle;
             $section = "";
@@ -364,12 +324,12 @@ class CourseCreator
             $searchable_id = array($brandeisCourse->Instructor);
             $note = array();
             //$reading_lists = (object) ["reading_list" => [(object) ["code" => $code, "name" => $name, "status" => (object) ["value" => "BeingPrepared"], "due_back_date" => $end_date]]];
-            
-            array_push($this->DestArray, new AlmaCourse($code, $name, $section, $academic_department, $processing_department, 
-                                                        $term, $start_date, $end_date, $weekly_hours, $participants, $year, 
+
+            array_push($this->DestArray, new AlmaCourse($code, $name, $section, $academic_department, $processing_department,
+                                                        $term, $start_date, $end_date, $weekly_hours, $participants, $year,
                                                         $instructor, $searchable_id, $note, $reading_lists));
-        } 
-        
+        }
+
         if ($this->Debug) {
             echo '<textarea>';
             foreach ($this->DestArray as $myCourse) {
@@ -378,48 +338,48 @@ class CourseCreator
             echo '</textarea><br>';
             echo "</div>";
         }
-        
+
     }
-    
+
     public function get_instructors_array( $Instructor, $jsonorxml ) {
-        
+
         if ($jsonorxml == "json") {
             return array("instructor"=>(object) array("primary_id"=>"julie.bister", "first_name"=>"julie", "last_name"=>"bister"));
         }
-        
+
         if ($jsonorxml == "xml") {
-            return "<instructor><primary_id>julie.bister</primary_id><first_name>Julie</first_name><last_name>Bister</last_name></instructor>";   
+            return "<instructor><primary_id>julie.bister</primary_id><first_name>Julie</first_name><last_name>Bister</last_name></instructor>";
         }
     }
-    
-    
-    
+
+
+
     public function check_if_dest_exists_and_update_or_add( $almaCourse ) {
         $returnValue = "nocheck";
-        
-        
+
+
         if ($this->Debug) {
             echo "<div class='check_if_dest_exists_and_update_or_add'>";
             echo "Checking if exists: ".$almaCourse->code."<br>";
         }
-        
+
         //$ch = curl_init();
         $queryParams = '?' . urlencode('q') . '=' . urlencode('code') . '~' . urlencode($almaCourse->code) . '&' . urlencode('limit') . '=' . urlencode('10') . '&' . urlencode('offset') . '=' . urlencode('0') . '&' . urlencode('order_by') . '=' . urlencode('code') . '&' . urlencode('direction') . '=' . urlencode('ASC') . '&' . urlencode('apikey') . '=' . urlencode($this->AlmaApiKey);
-        
-        
+
+
         $CURLOPT_URL = $this->AlmaBaseUrl . "/almaws/v1/courses" . $queryParams;
         $xmlorjson = null;
         $GETPUTPOSTorDELETE = 'GET';
         $POSTFIELDS = null;
         $response = $this->send_api_request( $CURLOPT_URL, $xmlorjson, $GETPUTPOSTorDELETE, $POSTFIELDS);
-        
+
         if($response == 'error') {
             $returnValue = "error";
         } else {
             $responseXML = new SimpleXMLElement($response);
             $attributesArray = $responseXML->attributes();
             if ($attributesArray["total_record_count"] == 1) {
-            
+
                 if ($this->Debug) {
                     echo '<br>' . $almaCourse->code . ' exists as Course ID: ' . $responseXML->course->id . '<br>';
                     echo "Latest course information from Alma: <br><textarea>";
@@ -427,20 +387,20 @@ class CourseCreator
                     echo "</textarea><br>";
                 }
                 //$returnValue = $this->delete_dest( $responseXML->course );
-                
+
                 if ($this->check_if_dest_needs_update( $almaCourse, $responseXML->course )) {
                     $returnValue = $this->update_dest( $responseXML->course );
                 } else {
                     $returnValue = "nochange";
                 }
-                
+
             } else {
                     if ($this->Debug) {
                         echo '<br>' . $almaCourse->code . ' not in Alma <br>';
                     }
                     $returnValue = $this->add_dest( $almaCourse );
                     //$returnValue = 'nochange';
-                     
+
             }
         }
         if ($this->Debug) {
@@ -448,28 +408,28 @@ class CourseCreator
         }
         //curl_close($ch);
         return $returnValue;
-        
+
         /*
         if ($this->Debug) {
             echo '<textarea>';
             echo print_r($response);
             echo '</textarea><br>';
-        } 
-        */ 
-        
+        }
+        */
+
     }
-    
+
     //This function checks and also changes the XML just obtained from the API
     public function check_if_dest_needs_update( $almaCourseRegistrar, &$almaCourseApiXML) {
-        
+
         if ($this->Debug) {
             echo "<div class='check_if_dest_needs_update'>";
             echo "Checking if needs update: ".print_r($almaCourseRegistrar)."<br>";
         }
-        
+
         $needsUpdate = false;
         $reason = "none";
-        
+
         if ($almaCourseRegistrar->code != $almaCourseApiXML->code) {
             $needsUpdate = true;
             $reason = "Codes do not match<br>";
@@ -499,46 +459,46 @@ class CourseCreator
             $needsUpdate = true;
             $reason = "Years do not match<br>";
         }
-        
+
         $this->reasonsList["$almaCourseApiXML->code"] = $reason;
-        
-        
+
+
         if ($almaCourseRegistrar->instructor != $almaCourseApiXML->instructors) {
             $needsUpdate = true;
             $reason = "Instructors do not match<br>";
             $almaCourseApiXML->instructors = $this->get_instructors_array($almaCourseRegistrar->instructor, "xml");
         }
-        
-        
+
+
         if ($this->Debug) {
-            echo '<br>'. $almaCourseApiXML->id . ' needs update: ' ; 
-            if ($needsUpdate) echo "true"; else echo "false"; 
+            echo '<br>'. $almaCourseApiXML->id . ' needs update: ' ;
+            if ($needsUpdate) echo "true"; else echo "false";
             echo "<br>reason: $reason<br>instructors:". $almaCourseApiXML->instructors;
             echo "</div>";
         }
-        
+
         return $needsUpdate;
 
-        
+
     }
-    
+
     public function update_dest( $almaCourseApiXML ) {
-        
+
         if ($this->Debug) {
             echo "<div class='update_dest'>";
             echo "Updating: ".$almaCourseApiXML->id."<br>";
         }
-        
+
         //$ch = curl_init();
         $queryParams = '/' . $almaCourseApiXML->id . '?' . urlencode('apikey') . '=' . urlencode($this->AlmaApiKey);
-        
-        
+
+
         $CURLOPT_URL = $this->AlmaBaseUrl . "/almaws/v1/courses" . $queryParams;
         $xmlorjson = 'xml';
         $GETPUTPOSTorDELETE = 'PUT';
         $POSTFIELDS = $almaCourseApiXML->asXML();
         $response = $this->send_api_request( $CURLOPT_URL, $xmlorjson, $GETPUTPOSTorDELETE, $POSTFIELDS);
-        
+
         if($response == 'error') {
             return "error";
         } else {
@@ -558,27 +518,27 @@ class CourseCreator
         }
         return "updated";
     }
-    
+
     public function add_dest( $almaCourse ) {
-        
+
         if ($this->Debug) {
             echo "<div class='add_dest'>";
             echo "Adding Course: <br><textarea>";
             print_r(json_encode($almaCourse));
             echo "</textarea><br>";
         }
-        
+
         $returnValue = 'impossible';
         //$ch = curl_init();
         $queryParams = '?' . urlencode('apikey') . '=' . urlencode($this->AlmaApiKey);
-        
-        
+
+
         $CURLOPT_URL = $this->AlmaBaseUrl . "/almaws/v1/courses" . $queryParams;
         $xmlorjson = 'json';
         $GETPUTPOSTorDELETE = 'POST';
         $POSTFIELDS = json_encode($almaCourse);
         $response = $this->send_api_request( $CURLOPT_URL, $xmlorjson, $GETPUTPOSTorDELETE, $POSTFIELDS);
-        
+
         if($response == 'error') {
             $returnValue = "error";
         } else {
@@ -592,38 +552,38 @@ class CourseCreator
             $returnValue = 'added';
         }
         //curl_close($ch);
-        
+
         if ($this->Debug) {
             echo "</div>";
         }
         return $returnValue;
     }
-    
+
     public function add_reading_list ( $almaCourseApiXML ) {
         $returnValue = 'impossible';
         if ($this->Debug) {
             echo "<div class='add_reading_list'>";
             echo "Adding reading list for: ".$almaCourseApiXML->id."<br>";
         }
-        
+
         $reading_list = (object) array("code" => $almaCourseApiXML->code->__toString(), "name" => $almaCourseApiXML->name->__toString(), "status" => (object) array("value" => "BeingPrepared"), "due_back_date" => $this->EndDate);
-        
+
         if ($this->Debug) {
                 echo "Reading List object: <br><textarea>";
                 print_r(json_encode($reading_list));
                 echo "</textarea><br>";
         }
-        
+
         //$ch = curl_init();
         $queryParams = '/' . $almaCourseApiXML->id . '/reading-lists?' . urlencode('apikey') . '=' . urlencode($this->AlmaApiKey);
-        
-        
+
+
         $CURLOPT_URL = $this->AlmaBaseUrl . "/almaws/v1/courses" . $queryParams;
         $xmlorjson = 'json';
         $GETPUTPOSTorDELETE = 'POST';
         $POSTFIELDS = json_encode($reading_list);
         $response = $this->send_api_request( $CURLOPT_URL, $xmlorjson, $GETPUTPOSTorDELETE, $POSTFIELDS);
-        
+
         if($response == 'error') {
             $returnValue = "error";
         } else {
@@ -632,7 +592,7 @@ class CourseCreator
                 print_r($response);
                 echo "</textarea><br>";
             }
-            
+
             $responseXML = new SimpleXMLElement($response);
             $returnValue = "reading list added";
         }
@@ -641,26 +601,26 @@ class CourseCreator
         }
         return $returnValue;
     }
-    
+
     public function delete_dest( $almaCourseApiXML ) {
         $returnValue = 'impossible';
-        
+
         if ($this->Debug) {
             echo "<div class='delete_dest'>";
             echo "Deleting: ".$almaCourseApiXML->id."<br>";
         }
-        
-        
+
+
         //$ch = curl_init();
         $queryParams = '/' . $almaCourseApiXML->id . '?' . urlencode('apikey') . '=' . urlencode($this->AlmaApiKey);
-        
-        
+
+
         $CURLOPT_URL = $this->AlmaBaseUrl . "/almaws/v1/courses" . $queryParams;
         $xmlorjson = 'json';
         $GETPUTPOSTorDELETE = 'DELETE';
         $POSTFIELDS = null;
         $response = $this->send_api_request( $CURLOPT_URL, $xmlorjson, $GETPUTPOSTorDELETE, $POSTFIELDS);
-        
+
         if($response == 'error') {
             $returnValue = "error";
         } else {
@@ -676,7 +636,7 @@ class CourseCreator
         }
         return $returnValue;
     }
-    
+
     public function check_all_dest_array_and_update_or_add() {
         echo "<div class='check_all_dest_array_and_update_or_add'>";
         if ($this->Debug) echo "check_all_dest_array_and_update_or_add<br>";
@@ -688,9 +648,9 @@ class CourseCreator
         $impossible = 0;
         $deleted = 0;
         $total = count($this->DestArray);
-        
+
         $this->reasonsList = array();
-        
+
         echo "<table><tr><th>checked</th><th>updated</th><th>added</th><th>deleted</th><th>nochange</th><th>error</th><th>impossible</th><th>code</th><th>action</th><th>reason</th></tr>";
         foreach ( $this->DestArray as $almaCourse ) {
             $this->reasonsList["$almaCourse->code"] = "none";
@@ -721,21 +681,21 @@ class CourseCreator
             }
             echo "<tr><td>$checked / $total</td><td>$updated</td><td>$added</td><td>$deleted</td><td>$nochange</td><td>$error</td><td>$impossible</td><td>$almaCourse->code</td><td>$checkResponse</td><td>" . $this->reasonsList["$almaCourse->code"] . "</td></tr>";
             flush();
-            
+
         }
         echo "</table>";
         flush();
-        
+
         echo "</div>";
     }
-    
+
     public function __construct( $almabaseurl, $almaapikey, $semester, $startdate, $enddate, $sourcecourseurl, $year, $processingdept, $debug ) {
         $this->AlmaBaseUrl = $almabaseurl;
         $this->AlmaApiKey = $almaapikey;
         $this->Semester = $semester;
         $this->StartDate = $startdate;
         $this->EndDate = $enddate;
-        $this->SourceCourseUrl = $sourcecourseurl;       
+        $this->SourceCourseUrl = $sourcecourseurl;
         $this->Year = $year;
         $this->YearSuffix = substr( $year, -2);
         $this->ProcessingDept = $processingdept;
@@ -745,28 +705,28 @@ class CourseCreator
 
 
 
-if ($_GET["function"] == "updateAllCourses" && 
+if ($_GET["function"] == "updateAllCourses" &&
     (($_GET["cipher"] == $SANDCIPHER) && ($_GET["environment"] == "SANDBOX")) ||
     (($_GET["cipher"] == $PRODCIPHER) && ($_GET["environment"] == "PRODUCTION"))) {
-    
+
     $environment = "";
     if ($_GET["environment"] == "SANDBOX") {
         $apiKey = $SANDBOX_API_KEY;
         $processingUnit = $PROD_PROC_UNIT;
-    } 
+    }
     else if ($_GET["environment"] == "PRODUCTION") {
         $apiKey = $PRODUCTION_API_KEY;
         $processingUnit = $SAND_PROC_UNIT;
-    } 
+    }
 
     $apiBase = htmlspecialchars($_GET["apiBase"]);
-    
+
     $season = "";
     if ($_GET["season"] == "SPRING") {
-        $season = "SPRING"; 
-    } 
+        $season = "SPRING";
+    }
     else if ($_GET["season"] == "FALL") {
-        $season = "FALL"; 
+        $season = "FALL";
     }
 
     $enrollmentPage = "";
@@ -776,23 +736,23 @@ if ($_GET["function"] == "updateAllCourses" &&
     else if ($season == "FALL") {
         $enrollmentPage = "http://www.brandeis.edu/registrar/FallEnrollment.html";
     }
-    
-     
+
+
     $startDate = htmlspecialchars($_GET["startDate"]);
     $endDate = htmlspecialchars($_GET["endDate"]);
     $year = substr($startDate,0,4);
 
     $debug = true;
 
-    if ( empty($apiBase) || 
+    if ( empty($apiBase) ||
         empty($apiKey) ||
-        empty($season) || 
+        empty($season) ||
         empty($startDate) ||
         empty($endDate) ||
-        empty($enrollmentPage) || 
+        empty($enrollmentPage) ||
         empty($year) ||
         empty($processingUnit)) {
-        
+
         echo '<h1>Job failed to start: Bad Parameters</h1>
                 <table>
                     <tr><th>Parameter</th><th>Value</th></tr>
@@ -818,12 +778,12 @@ if ($_GET["function"] == "updateAllCourses" &&
     }
 
 } else {
-    
+
     $apiBase = "https://api-na.hosted.exlibrisgroup.com";
     $startDate = "2018-01-01Z";
     $endDate = "2018-05-09Z";
-    
-    
+
+
 echo '
 <form method="get" name="myForm">
 <select name="function">
@@ -843,7 +803,7 @@ echo '
 <label>Password<input type="text" name="cipher" value=""></label>
 <input type="submit" value="Go">
 </form>';
-    
+
 echo '
 <form method="get" name="myFormDelete">
 <select name="function">
@@ -860,10 +820,10 @@ echo '
 <label>Password<input type="text" name="cipher" value=""></label>
 <input type="submit" value="Go">
 </form>';
-    
+
 }
 
 echo '</body></html>';
-    
-    
+
+
 ?>
